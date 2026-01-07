@@ -1,0 +1,32 @@
+- name: Install Docker and Docker Compose
+  apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker socket is started
+  service:
+    name: docker.socket
+    state: started
+    enabled: yes
+
+- name: Start and enable Docker
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Wait for Docker socket
+  wait_for:
+    path: /var/run/docker.sock
+    state: present
+    timeout: 30
+
+- name: Wait for Docker to be ready
+  shell: docker info
+  register: docker_info
+  until: docker_info.rc == 0
+  retries: 10
+  delay: 5

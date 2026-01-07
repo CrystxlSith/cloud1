@@ -1,0 +1,51 @@
+- name: Create app directory
+  file:
+    path: "{{ app_path }}"
+    state: directory
+
+- name: Create data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ data_path }}/wordpress"
+    - "{{ data_path }}/mariadb"
+
+- name: Create secrets directory
+  file:
+    path: "{{ app_path }}/secrets"
+    state: directory
+
+- name: Copy docker-compose.yml
+  copy:
+    src: ../../../Inception/srcs/docker-compose.yml
+    dest: "{{ app_path }}/docker-compose.yml"
+
+- name: Copy requirements folder
+  copy:
+    src: ../../../Inception/srcs/requirements/
+    dest: "{{ app_path }}/requirements/"
+
+- name: Fix script line endings (CRLF to LF)
+  shell: sed -i 's/\r$//' {{ app_path }}/requirements/*/tools/script.sh
+
+- name: Create .env file
+  template:
+    src: .env.j2
+    dest: "{{ app_path }}/.env"
+
+- name: Create secrets files
+  copy:
+    content: "{{ item.content }}"
+    dest: "{{ app_path }}/secrets/{{ item.name }}"
+  loop:
+    - { name: "db_password.txt", content: "{{ db_password }}" }
+    - { name: "db_root_password.txt", content: "{{ db_root_password }}" }
+    - { name: "wp_admin_password.txt", content: "{{ wp_admin_password }}" }
+    - { name: "wp_user_password.txt", content: "{{ wp_user_password }}" }
+    - { name: "credentials.txt", content: "MYSQL_DATABASE={{ db_name }}\nMYSQL_USER={{ db_user }}\nMYSQL_HOSTNAME=mariadb\n" }
+
+- name: Build and start containers
+  shell: docker-compose up -d --build
+  args:
+    chdir: "{{ app_path }}"

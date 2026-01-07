@@ -1,9 +1,8 @@
-- name: My first play
+- name: Deploy WordPress
   hosts: myhosts
-  tasks:
-   - name: Ping my hosts
-     ansible.builtin.ping:
+  become: true
 
-   - name: Print message
-     ansible.builtin.debug:
-       msg: Hello world
+  roles:
+    - firewall
+    - docker
+    - app

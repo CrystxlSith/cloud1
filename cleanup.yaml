@@ -1,0 +1,56 @@
+- name: Cleanup everything
+  hosts: myhosts
+  become: yes
+
+  tasks:
+    - name: Stop all containers
+      shell: docker stop $(docker ps -aq) 2>/dev/null || true
+
+    - name: Remove all containers
+      shell: docker rm $(docker ps -aq) 2>/dev/null || true
+
+    - name: Remove all volumes
+      shell: docker volume rm $(docker volume ls -q) 2>/dev/null || true
+
+    - name: Remove all images
+      shell: docker rmi -f $(docker images -q) 2>/dev/null || true
+
+    - name: Stop Docker services
+      service:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - docker
+        - docker.socket
+      ignore_errors: yes
+
+    - name: Reset failed Docker service
+      shell: systemctl reset-failed docker.service 2>/dev/null || true
+
+    - name: Remove Docker
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: absent
+        purge: yes
+
+    - name: Remove Docker directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/docker
+        - /etc/docker
+        - /opt/wordpress
+        - /opt/data
+
+    - name: Force remove data (ensure clean)
+      shell: rm -rf /opt/data /opt/wordpress /var/lib/docker 2>/dev/null || true
+
+    - name: Autoremove unused packages
+      apt:
+        autoremove: yes
+
+    - name: Reload systemd
+      shell: systemctl daemon-reload
